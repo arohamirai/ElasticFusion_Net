@@ -21,17 +21,8 @@ find_path(OPENNI2_INCLUDE_DIR OpenNI.h
             ${PC_OPENNI_INCLUDEDIR}
             ${PC_OPENNI_INCLUDE_DIRS}
           PATHS
-            "${PROGRAM_FILES}/OpenNI2/Include"
-            "${CMAKE_SOURCE_DIR}/../OpenNI2/Include"
-            "${CMAKE_SOURCE_DIR}/../../OpenNI2/Include"
-            "${CMAKE_SOURCE_DIR}/../../../OpenNI2/Include"
-            "${CMAKE_SOURCE_DIR}/../../../../OpenNI2/Include"
-            "${CMAKE_SOURCE_DIR}/../../../code/OpenNI2/Include"
-            "${CMAKE_SOURCE_DIR}/../../../../code/OpenNI2/Include"
-            "${CMAKE_SOURCE_DIR}/../deps/OpenNI2/Include"
-            "${CMAKE_SOURCE_DIR}/../../deps/OpenNI2/Include"
-            "${CMAKE_SOURCE_DIR}/../../../deps/OpenNI2/Include"
-            "${CMAKE_SOURCE_DIR}/../../../../deps/OpenNI2/Include"
+            "~/OpenNI2/Include"
+     
             /usr/include
             /user/include
           PATH_SUFFIXES openni2 ni2
@@ -50,18 +41,7 @@ find_library(OPENNI2_LIBRARY
                ${PC_OPENNI_LIBDIR}
                ${PC_OPENNI_LIBRARY_DIRS}
              PATHS
-               "${PROGRAM_FILES}}/OpenNI2/Redist"
-               "${PROGRAM_FILES}/OpenNI2"
-               "${CMAKE_SOURCE_DIR}/../OpenNI2/Bin/x64-Release"
-               "${CMAKE_SOURCE_DIR}/../../OpenNI2/Bin/x64-Release"
-               "${CMAKE_SOURCE_DIR}/../../../OpenNI2/Bin/x64-Release"
-               "${CMAKE_SOURCE_DIR}/../../../../OpenNI2/Bin/x64-Release"
-               "${CMAKE_SOURCE_DIR}/../../../code/OpenNI2/Bin/x64-Release"
-               "${CMAKE_SOURCE_DIR}/../../../../code/OpenNI2/Bin/x64-Release"
-               "${CMAKE_SOURCE_DIR}/../deps/OpenNI2/Bin/x64-Release"
-               "${CMAKE_SOURCE_DIR}/../../deps/OpenNI2/Bin/x64-Release"
-               "${CMAKE_SOURCE_DIR}/../../../deps/OpenNI2/Bin/x64-Release"
-               "${CMAKE_SOURCE_DIR}/../../../../deps/OpenNI2/Bin/x64-Release"
+		~/OpenNI2/Bin/x64-Release
                /usr/lib
                /user/lib
              PATH_SUFFIXES ${OPENNI_PATH_SUFFIXES}
