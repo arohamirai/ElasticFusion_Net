@@ -29,38 +29,32 @@ using namespace cv;
 
 int main(int argc, char** argv)
 {
-	// init network
-	const char *servInetAddr = "127.0.0.1";
- 	int socketfd;
- 	struct sockaddr_in sockaddr;
-    uchar sendline[MAXLINE];
-	memset(sendline,0, MAXLINE);
-	
-	socketfd = socket(AF_INET,SOCK_STREAM,0);
- 	memset(&sockaddr,0,sizeof(sockaddr));
- 	sockaddr.sin_family = AF_INET;
- 	sockaddr.sin_port = htons(6666);
- 	inet_pton(AF_INET,servInetAddr,&sockaddr.sin_addr);
- 	if((connect(socketfd,(struct sockaddr*)&sockaddr,sizeof(sockaddr))) < 0 )
- 	{
-		 printf("connect error %s errno: %d\n",strerror(errno),errno);
- 		exit(0);
- 	}
-	
+    // init network
+    int listenfd,connfd;
+    struct sockaddr_in sockaddr;
+    memset(&sockaddr,0,sizeof(sockaddr));
+ 
+    sockaddr.sin_family = AF_INET;
+    sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    sockaddr.sin_port = htons(6666);
+ 
+    listenfd = socket(AF_INET,SOCK_STREAM,0);
+    bind(listenfd,(struct sockaddr *) &sockaddr,sizeof(sockaddr));
+    listen(listenfd,1);
 
-	
-	//1. Setup
-	int width = 640,height = 480,fps = 30;
+
+    //1. Setup
+    int width = 640,height = 480,fps = 30;
     openni::Status rc = openni::STATUS_OK;
     const char * deviceURI = openni::ANY_DEVICE;
 	
-	// 2. initialize
+    // 2. initialize
     rc = openni::OpenNI::initialize();
 	
-	//3. open device
-	openni::Device devAnyDevice;
-	rc = devAnyDevice.open(deviceURI);
-	//4. set Mode
+    //3. open device
+    openni::Device devAnyDevice;
+    rc = devAnyDevice.open(deviceURI);
+    //4. set Mode
     openni::VideoMode depthMode;
     depthMode.setFps(fps);
     depthMode.setPixelFormat(openni::PIXEL_FORMAT_DEPTH_1_MM);
@@ -72,27 +66,42 @@ int main(int argc, char** argv)
     colorMode.setResolution(width, height);
 
 	// 4.1 create streamDepth and setMode
-	openni::VideoStream streamDepth;
+    openni::VideoStream streamDepth;
     rc = streamDepth.create(devAnyDevice, openni::SENSOR_DEPTH);
     streamDepth.setVideoMode(depthMode);
     rc = streamDepth.start();
        
 			
 	//4.2 create rgbStream and setMode
-	openni::VideoStream streamRgb;
+    openni::VideoStream streamRgb;
     rc = streamRgb.create(devAnyDevice, openni::SENSOR_COLOR);
     streamRgb.setVideoMode(colorMode);
     rc = streamRgb.start();
 
 
 	// 5. main loop, continue read
-	openni::VideoFrameRef frameDepth;
-	openni::VideoFrameRef frameRgb;
+    openni::VideoFrameRef frameDepth;
+    openni::VideoFrameRef frameRgb;
 	
-	unsigned char *depthBuf = (unsigned char*)malloc(width*height*2);
-	unsigned char *rgbBuf = (unsigned char*)malloc(width*height*3);
-	namedWindow("depth",1);
-	namedWindow("rgb",1);
+    unsigned char *depthBuf = (unsigned char*)malloc(width*height*2);
+    unsigned char *rgbBuf = (unsigned char*)malloc(width*height*3);
+    uchar sendline[MAXLINE];
+    memset(sendline,0, MAXLINE);
+
+    namedWindow("depth",1);
+    namedWindow("rgb",1);
+    while(1)
+    {
+	// use for reconnect
+        printf("Please wait for the client information\n");
+ 	if((connfd = accept(listenfd,(struct sockaddr*)NULL,NULL))==-1)
+ 	{
+ 	    printf("accpet socket error: %s errno :%d\n",strerror(errno),errno);
+	    return 0;	
+ 	}
+	else
+	    printf("accpet sucess\n");
+
 	for (; ;)
 	{
 		// 5.1 get frame
@@ -109,8 +118,14 @@ int main(int argc, char** argv)
 		memcpy(sendline,frameDepth.getData(),width*height*2);
 		memcpy(sendline+width*height*2,frameRgb.getData(),width*height*3);
 		
-		int n=send(socketfd,(const char*)(&sendline),MAXLINE,0);
-		
+		int n=send(connfd,(const char*)(&sendline),MAXLINE,0);
+		if(n == -1)
+		{
+		    close(connfd);
+		    connfd = -1;
+		    break;
+		}
+			
 		// 5.4 show the image
 		Mat depth(height,width,CV_16UC1,depthBuf);
 		//normalize(depth,depth,1,0, NORM_MINMAX);
@@ -123,6 +138,7 @@ int main(int argc, char** argv)
 		
 	
 	}
+   }
 
 	// 6. close
 	streamDepth.destroy();

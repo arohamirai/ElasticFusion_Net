@@ -52,16 +52,17 @@ OpenNI2Interface::OpenNI2Interface(int inWidth, int inHeight, int fps)
    initSuccessful(true)
 {		
 ///////////////////////////////////////
-       for(int i = 0; i < numBuffers; i++)
-        {
-           uint8_t * newDepth = (uint8_t *)calloc(width * height * 2, sizeof(uint8_t));
-           uint8_t * newImage = (uint8_t *)calloc(width * height * 3, sizeof(uint8_t));
-           frameBuffers[i] = std::pair<std::pair<uint8_t *, uint8_t *>, int64_t>(std::pair<uint8_t *, uint8_t *>(newDepth, newImage), 0);
-        }
-	 latestDepthIndex.assign(-1);
-	
-	  pthread_t t1;
-	  pthread_create( &t1, NULL, &threadProc, this);
+
+    for(int i = 0; i < numBuffers; i++)
+    {
+        uint8_t * newDepth = (uint8_t *)calloc(width * height * 2, sizeof(uint8_t));
+        uint8_t * newImage = (uint8_t *)calloc(width * height * 3, sizeof(uint8_t));
+        frameBuffers[i] = std::pair<std::pair<uint8_t *, uint8_t *>, int64_t>(std::pair<uint8_t *, uint8_t *>(newDepth, newImage), 0);
+    }
+    latestDepthIndex.assign(-1);
+
+    pthread_t t1;
+    pthread_create( &t1, NULL, &threadProc, this);
 }
 
 OpenNI2Interface::~OpenNI2Interface()
@@ -94,59 +95,58 @@ void *threadProc(void *param)
 	char buff[MAXLINE];
 	memset(buff,0, MAXLINE);
 
- 	
+	const char *servInetAddr = "192.168.1.190";
+ 	int socketfd;
  	struct sockaddr_in sockaddr;
+	
+	//socketfd = socket(AF_INET,SOCK_STREAM,0);
  	memset(&sockaddr,0,sizeof(sockaddr));
- 
  	sockaddr.sin_family = AF_INET;
- 	sockaddr.sin_addr.s_addr = htonl(INADDR_ANY);
  	sockaddr.sin_port = htons(6666);
- 
- 	listenfd = socket(AF_INET,SOCK_STREAM,0);
- 	bind(listenfd,(struct sockaddr *) &sockaddr,sizeof(sockaddr));
- 	listen(listenfd,1);
+ 	inet_pton(AF_INET,servInetAddr,&sockaddr.sin_addr);
 
- 
- 	printf("Please wait for the client information\n");
- 	if((connfd = accept(listenfd,(struct sockaddr*)NULL,NULL))==-1)
- 	{
- 		printf("accpet socket error: %s errno :%d\n",strerror(errno),errno);
-		close(connfd);
- 		close(listenfd);
-		return 0;	
- 	}
-	else
-		printf("accpet sucess\n");
-	
-	int width = 640,height = 480;
- 	while(true)   //每次循环表示对一帧（图）的数据处理
-	 {      
-		int bytes=0;
-		for(int k=0;k<MAXLINE;k+=bytes)//将接受的数据全部放入buff数组中
-		{
-	 		bytes=recv(connfd,&buff[0]+k,MAXLINE-k,0);//每次能够接受数据的长度，不同电脑接受数据长度不一样
-			if(bytes==0)
-			{
-				std::cout<<"recv error"<<std::endl;
-				return 0;
-			}
-		}
-	 
-		 {
-		   int64_t lastTime = std::chrono::duration_cast<std::chrono::milliseconds>(
-           std::chrono::system_clock::now().time_since_epoch()).count();
+    while(1)
+    {
+	socketfd = socket(AF_INET,SOCK_STREAM,0);
+        if((connect(socketfd,(struct sockaddr*)&sockaddr,sizeof(sockaddr))) < 0 )
+        {
+             close(socketfd);
+             printf("connect error %s errno: %d\n",strerror(errno),errno);
+             usleep(3);
+             continue;
+             //exit(0);
+        }
 
-           int bufferIndex = (pFace->latestDepthIndex.getValue() + 1) % pFace->numBuffers;
+        int width = 640,height = 480;
+        while(true)   //每次循环表示对一帧（图）的数据处理
+        {
+            int bytes=0;
+            int k=0;
+            for(;k<MAXLINE;k+=bytes)//将接受的数据全部放入buff数组中
+            {
+                bytes=recv(socketfd,&buff[0]+k,MAXLINE-k,0);//每次能够接受数据的长度，不同电脑接受数据长度不一样
+                if(bytes<=0)
+                {
+                    break;
+                }
+            }
+	//*
+            if(k != MAXLINE)
+            {
+		close(socketfd);
+                break;
+            }/**/
+            int64_t lastTime = std::chrono::duration_cast<std::chrono::milliseconds>(
+               std::chrono::system_clock::now().time_since_epoch()).count();
 
-           memcpy(pFace->frameBuffers[bufferIndex].first.first, buff, width * height * 2);
-		   memcpy(pFace->frameBuffers[bufferIndex].first.second, buff+width * height * 2, width * height * 3);
+            int bufferIndex = (pFace->latestDepthIndex.getValue() + 1) % pFace->numBuffers;
 
-           pFace->frameBuffers[bufferIndex].second = lastTime;
+            memcpy(pFace->frameBuffers[bufferIndex].first.first, buff, width * height * 2);
+            memcpy(pFace->frameBuffers[bufferIndex].first.second, buff+width * height * 2, width * height * 3);
 
-           pFace->latestDepthIndex++;
-		 }
- 	}
-	close(connfd);
- 	close(listenfd);
-	
+            pFace->frameBuffers[bufferIndex].second = lastTime;
+            pFace->latestDepthIndex++;
+        }
+    }
+    return 0;
 }

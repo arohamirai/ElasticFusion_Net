@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8)
-project(host)  
+project(recvTerminal)  
 #opencv
 find_package(OpenCV 3.0 QUIET)
 if(NOT OpenCV_FOUND)
@@ -14,6 +14,6 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 link_libraries( ${OpenCV_LIBS})
 
 
-add_executable(host host.cpp)  
+add_executable(recvTerminal main.cpp)  
 
 
